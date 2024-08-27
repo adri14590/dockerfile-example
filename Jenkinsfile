@@ -15,14 +15,9 @@ pipeline {
         stage('Prepare Environment') {
             steps {
                 script {
-                    // Lógica para determinar si es una branch o un tag
-                    def gitRef = env.BRANCH_NAME ? env.BRANCH_NAME : env.GIT_TAG_NAME
-                    // Asigna gitRef a una variable de entorno para usarla en otros stages
-                    env.GIT_REF = gitRef
-
                     // Lógica para determinar el tag de la imagen
                     def dockerTag = ""
-                    if (env.BRANCH_NAME ==~ /^develop$/ || env.BRANCH_NAME ==~ env.FEATURE_REGEX) {
+                    if (env.BRANCH_NAME == "develop" || env.BRANCH_NAME ==~ env.FEATURE_REGEX) {
                         // Si estamos en develop o feature/*, usa el SHA1 del commit como tag
                         dockerTag = "${env.GIT_COMMIT}"
                     } else if (env.BRANCH_NAME ==~ env.RELEASE_REGEX) {
@@ -32,9 +27,9 @@ pipeline {
                     } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "main") {
                         // Si estamos en master o main, usa latest como tag
                         dockerTag = "latest"  
-                    } else if (env.GIT_TAG_NAME ==~ env.TAG_REGEX) {
+                    } else if (env.BRANCH_NAME ==~ env.TAG_REGEX) {
                         // Si estamos en un tag semver, usa x.y.z como tag
-                        dockerTag = env.GIT_TAG_NAME
+                        dockerTag = env.BRANCH_NAME
                     } else {
                         error("No se pudo determinar el tag de la imagen Docker")
                     }
@@ -53,7 +48,7 @@ pipeline {
         // stage('Checkout Code') {
         //     steps {
         //         script {
-        //              git branch: env.GIT_REF,
+        //              git branch: env.BRANCH_NAME,
         //                 credentialsId: repositoryCredentials,
         //                 url: repository
         //         }
@@ -88,7 +83,7 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    def containerName = "${env.project}-${env.GIT_REF}"
+                    def containerName = "${env.project}-${env.BRANCH_NAME}"
                     try {
                         echo "Creando el contenedor con el nombre: ${containerName}"
                         // Usa la interpolación correcta para pasar la variable a la shell
