@@ -50,15 +50,15 @@ pipeline {
             }
         }
 
-        stage('Checkout Code') {
-            steps {
-                script {
-                     git branch: env.GIT_REF,
-                        credentialsId: repositoryCredentials,
-                        url: repository
-                }
-            }
-        }
+        // stage('Checkout Code') {
+        //     steps {
+        //         script {
+        //              git branch: env.GIT_REF,
+        //                 credentialsId: repositoryCredentials,
+        //                 url: repository
+        //         }
+        //     }
+        // }
 
         stage('Build Docker Image') {
             steps {
