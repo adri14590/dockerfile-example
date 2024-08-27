@@ -88,7 +88,7 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    def containerName = "${env.project}-${env.GIT_REV}"
+                    def containerName = "${env.project}-${env.GIT_REF}"
                     try {
                         echo "Creando el contenedor con el nombre: ${containerName}"
                         // Usa la interpolación correcta para pasar la variable a la shell
