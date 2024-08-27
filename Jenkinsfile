@@ -12,53 +12,16 @@ pipeline {
     }
 
     stages {
-        stage('Clean Workspace') {
-            steps {
-                cleanWs()
-            }
-        }
-
-        stage('Checkout Code') {
+        stage('Prepare Environment') {
             steps {
                 script {
-                    git branch: env.BRANCH_NAME,
-                        credentialsId: repositoryCredentials,
-                        url: repository
-                }
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    dockerImage = docker.build registry
-                }
-            }
-        }
-
-        stage('Test Docker Image') {
-            steps {
-                script {
-                    // Determina si es una branch o un tag y usa el nombre correspondiente
+                    // Lógica para determinar si es una branch o un tag
                     def gitRef = env.BRANCH_NAME ? env.BRANCH_NAME : env.GIT_TAG_NAME
-                    def containerName = "${env.project}-${gitRef}"
-                    try {
-                        echo "Creando el contenedor con el nombre: ${containerName}"
-                        // Usa la interpolación correcta para pasar la variable a la shell
-                        sh "docker run --name ${containerName} -e 'LENGTH=20' ${registry}"
-                    } finally {
-                        // Asegúrate de eliminar el contenedor con el nombre correcto
-                        sh "docker rm ${containerName}"
-                    }
-                }
-            }
-        }
+                    // Asigna gitRef a una variable de entorno para usarla en otros stages
+                    env.GIT_REF = gitRef
 
-        stage('Delivery') {
-            steps {
-                script {
+                    // Lógica para determinar el tag de la imagen
                     def dockerTag = ""
-                    
                     if (env.BRANCH_NAME ==~ /^develop$/ || env.BRANCH_NAME ==~ env.FEATURE_REGEX) {
                         // Si estamos en develop o feature/*, usa el SHA1 del commit como tag
                         dockerTag = "${env.GIT_COMMIT}"
@@ -75,15 +38,77 @@ pipeline {
                     } else {
                         error("No se pudo determinar el tag de la imagen Docker")
                     }
-
-                    echo "Subiendo la imagen con el tag: ${dockerTag}"
-
-                    docker.withRegistry('', registryCredentials) {
-                        dockerImage.push(dockerTag)
-                    }
-
                     // Set the dockerTag in the pipeline environment for use in other stages
                     env.DOCKER_TAG = dockerTag
+                }
+            }
+        }
+
+        // stage('Clean Workspace') {
+        //     steps {
+        //         cleanWs()
+        //     }
+        // }
+
+        // stage('Checkout Code') {
+        //     steps {
+        //         script {
+        //              git branch: env.GIT_REF,
+        //                 credentialsId: repositoryCredentials,
+        //                 url: repository
+        //         }
+        //     }
+        // }
+
+        // stage('Code Analysis'){
+        //     environment{
+        //         scannerHome= tool 'Sonar'
+        //     }
+        //     steps{
+        //         script{
+        //             withSonarQubeEnv('Sonar'){
+        //                 sh "${scannerHome}/bin/sonar-scanner \
+        //                 -Dsonar.projectKey=$project \
+        //                 -Dsonar.projectName=$project \
+        //                 -Dsonar.projectVersion=$projectVersion \
+        //                 -Dsonar.sources=./"
+        //             }
+        //         }
+        //     }
+        // }
+
+        stage('Build') {
+            steps {
+                script {
+                    dockerImage = docker.build registry
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                script {
+                    def containerName = "${env.project}-${env.GIT_REV}"
+                    try {
+                        echo "Creando el contenedor con el nombre: ${containerName}"
+                        // Usa la interpolación correcta para pasar la variable a la shell
+                        sh "docker run --name ${containerName} -e 'LENGTH=20' ${registry}"
+                    } finally {
+                        // Asegúrate de eliminar el contenedor con el nombre correcto
+                        sh "docker rm ${containerName}"
+                    }
+                }
+            }
+        }
+
+        stage('Delivery') {
+            steps {
+                script {            
+                    echo "Subiendo la imagen con el tag: ${env.DOCKER_TAG}"
+
+                    docker.withRegistry('', registryCredentials) {
+                        dockerImage.push(env.DOCKER_TAG)
+                    }
                 }
             }
         }
