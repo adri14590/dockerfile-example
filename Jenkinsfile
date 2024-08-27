@@ -9,11 +9,13 @@ pipeline{
         repositoryCredentials="github"
     }
     stages{
+
         stage('Clean Workspace'){
             steps{
                 cleanWs()
             }
         }
+        
         stage('Checkout code'){
             steps{
                 script{
@@ -24,22 +26,22 @@ pipeline{
             }
         }
 
-        stage('Code Analysis'){
-            environment{
-                scannerHome= tool 'Sonar'
-            }
-            steps{
-                script{
-                    withSonarQubeEnv('Sonar'){
-                        sh "${scannerHome}/bin/sonar-scanner \
-                        -Dsonar.projectKey=$project \
-                        -Dsonar.projectName=$project \
-                        -Dsonar.projectVersion=$projectVersion \
-                        -Dsonar.sources=./"
-                    }
-                }
-            }
-        }
+        // stage('Code Analysis'){
+        //     environment{
+        //         scannerHome= tool 'Sonar'
+        //     }
+        //     steps{
+        //         script{
+        //             withSonarQubeEnv('Sonar'){
+        //                 sh "${scannerHome}/bin/sonar-scanner \
+        //                 -Dsonar.projectKey=$project \
+        //                 -Dsonar.projectName=$project \
+        //                 -Dsonar.projectVersion=$projectVersion \
+        //                 -Dsonar.sources=./"
+        //             }
+        //         }
+        //     }
+        // }
 
         stage('Build'){
             steps{
