@@ -40,7 +40,10 @@ pipeline {
             steps {
                 script {
                     try {
-                        sh 'docker run --name $project -e "LENGTH=20" $registry'
+                        def gitRef = env.BRANCH_NAME || env.GIT_TAG_NAME
+                        def containerName = env.project + "-" + gitRef
+                        echo "Creando el contenedor con el nombre: ${containerName}"
+                        sh 'docker run --name ${containerName} -e "LENGTH=20" $registry'
                     } finally {
                         sh 'docker rm $project'
                     }
