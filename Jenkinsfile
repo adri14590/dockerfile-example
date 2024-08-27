@@ -81,6 +81,9 @@ pipeline {
                     docker.withRegistry('', registryCredentials) {
                         dockerImage.push(dockerTag)
                     }
+
+                    // Set the dockerTag in the pipeline environment for use in other stages
+                    env.DOCKER_TAG = dockerTag
                 }
             }
         }
@@ -88,7 +91,14 @@ pipeline {
         stage('Cleaning Up') {
             steps {
                 script {
-                    sh 'docker rmi $registry'
+                    // Use the dockerTag from the environment variable
+                    def dockerTag = env.DOCKER_TAG
+                    
+                    if (dockerTag) {
+                        sh "docker rmi ${registry}:${dockerTag}"
+                    } else {
+                        echo "No se pudo eliminar la imagen ya que dockerTag no está definido."
+                    }
                 }
             }
         }
