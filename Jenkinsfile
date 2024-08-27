@@ -40,12 +40,15 @@ pipeline {
             steps {
                 script {
                     try {
-                        def gitRef = env.BRANCH_NAME || env.GIT_TAG_NAME
-                        def containerName = env.project + "-" + gitRef
+                        // Determina si es una branch o un tag y usa el nombre correspondiente
+                        def gitRef = env.BRANCH_NAME ? env.BRANCH_NAME : env.GIT_TAG_NAME
+                        def containerName = "${env.project}-${gitRef}"
                         echo "Creando el contenedor con el nombre: ${containerName}"
-                        sh 'docker run --name ${containerName} -e "LENGTH=20" $registry'
+                        // Usa la interpolación correcta para pasar la variable a la shell
+                        sh "docker run --name ${containerName} -e 'LENGTH=20' ${registry}"
                     } finally {
-                        sh 'docker rm $project'
+                        // Asegúrate de eliminar el contenedor con el nombre correcto
+                        sh "docker rm ${containerName}"
                     }
                 }
             }
