@@ -12,6 +12,38 @@ pipeline {
     }
 
     stages {
+        stage('Prepare Environment') {
+            steps {
+                script {
+                    // Lógica para determinar si es una branch o un tag
+                    def gitRef = env.BRANCH_NAME ? env.BRANCH_NAME : env.GIT_TAG_NAME
+                    // Asigna gitRef a una variable de entorno para usarla en otros stages
+                    env.GIT_REF = gitRef
+
+                    // Lógica para determinar el tag de la imagen
+                    def dockerTag = ""
+                    if (env.BRANCH_NAME ==~ /^develop$/ || env.BRANCH_NAME ==~ env.FEATURE_REGEX) {
+                        // Si estamos en develop o feature/*, usa el SHA1 del commit como tag
+                        dockerTag = "${env.GIT_COMMIT}"
+                    } else if (env.BRANCH_NAME ==~ env.RELEASE_REGEX) {
+                        // Si estamos en release/x.y.z, usa pre-x.y.z como tag
+                        def releaseVersion = env.BRANCH_NAME.replace("release/", "")
+                        dockerTag = "pre-${releaseVersion}"
+                    } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "main") {
+                        // Si estamos en master o main, usa latest como tag
+                        dockerTag = "latest"  
+                    } else if (env.GIT_TAG_NAME ==~ env.TAG_REGEX) {
+                        // Si estamos en un tag semver, usa x.y.z como tag
+                        dockerTag = env.GIT_TAG_NAME
+                    } else {
+                        error("No se pudo determinar el tag de la imagen Docker")
+                    }
+                    // Set the dockerTag in the pipeline environment for use in other stages
+                    env.DOCKER_TAG = dockerTag
+                }
+            }
+        }
+
         stage('Clean Workspace') {
             steps {
                 cleanWs()
@@ -21,7 +53,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 script {
-                    git branch: env.BRANCH_NAME,
+                     git branch: env.GIT_REF,
                         credentialsId: repositoryCredentials,
                         url: repository
                 }
@@ -39,9 +71,7 @@ pipeline {
         stage('Test Docker Image') {
             steps {
                 script {
-                    // Determina si es una branch o un tag y usa el nombre correspondiente
-                    def gitRef = env.BRANCH_NAME ? env.BRANCH_NAME : env.GIT_TAG_NAME
-                    def containerName = "${env.project}-${gitRef}"
+                    def containerName = "${env.project}-${env.GIT_REV}"
                     try {
                         echo "Creando el contenedor con el nombre: ${containerName}"
                         // Usa la interpolación correcta para pasar la variable a la shell
@@ -56,34 +86,12 @@ pipeline {
 
         stage('Delivery') {
             steps {
-                script {
-                    def dockerTag = ""
-                    
-                    if (env.BRANCH_NAME ==~ /^develop$/ || env.BRANCH_NAME ==~ env.FEATURE_REGEX) {
-                        // Si estamos en develop o feature/*, usa el SHA1 del commit como tag
-                        dockerTag = "${env.GIT_COMMIT}"
-                    } else if (env.BRANCH_NAME ==~ env.RELEASE_REGEX) {
-                        // Si estamos en release/x.y.z, usa pre-x.y.z como tag
-                        def releaseVersion = env.BRANCH_NAME.replace("release/", "")
-                        dockerTag = "pre-${releaseVersion}"
-                    } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "main") {
-                        // Si estamos en master o main, usa latest como tag
-                        dockerTag = "latest"  
-                    } else if (env.GIT_TAG_NAME ==~ env.TAG_REGEX) {
-                        // Si estamos en un tag semver, usa x.y.z como tag
-                        dockerTag = env.GIT_TAG_NAME
-                    } else {
-                        error("No se pudo determinar el tag de la imagen Docker")
-                    }
-
-                    echo "Subiendo la imagen con el tag: ${dockerTag}"
+                script {            
+                    echo "Subiendo la imagen con el tag: ${env.DOCKER_TAG}"
 
                     docker.withRegistry('', registryCredentials) {
-                        dockerImage.push(dockerTag)
+                        dockerImage.push(env.DOCKER_TAG)
                     }
-
-                    // Set the dockerTag in the pipeline environment for use in other stages
-                    env.DOCKER_TAG = dockerTag
                 }
             }
         }
