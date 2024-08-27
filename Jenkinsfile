@@ -63,6 +63,9 @@ pipeline {
                     } else if (env.GIT_TAG_NAME ==~ env.TAG_REGEX) {
                         // Si estamos en un tag semver, usa x.y.z como tag
                         dockerTag = env.GIT_TAG_NAME
+                    } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "main") {
+                        // Si estamos en master o main, usa latest como tag
+                        dockerTag = "latest"  
                     } else {
                         error("No se pudo determinar el tag de la imagen Docker")
                     }
