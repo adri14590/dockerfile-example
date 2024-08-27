@@ -1,11 +1,11 @@
 pipeline{
     agent any
     environment{
-        registry= "manuelgm/jenkins-example"
+        registry= "adri14590/jenkins-example"
         registryCredentials="dockerhub"
         project="jenkins-example"
         projectVersion="1.0"
-        repository="https://github.com/megmontero/dockerfile-example.git"
+        repository="https://github.com/adri14590/dockerfile-example.git"
         repositoryCredentials="github"
     }
     stages{
@@ -62,7 +62,7 @@ pipeline{
             }
         }
 
-        stage('Deploy'){
+        stage('Delivery'){
             steps{
                 script{
                     docker.withRegistry('',registryCredentials ){
