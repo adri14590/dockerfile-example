@@ -60,12 +60,12 @@ pipeline {
                         // Si estamos en release/x.y.z, usa pre-x.y.z como tag
                         def releaseVersion = env.BRANCH_NAME.replace("release/", "")
                         dockerTag = "pre-${releaseVersion}"
-                    } else if (env.GIT_TAG_NAME ==~ env.TAG_REGEX) {
-                        // Si estamos en un tag semver, usa x.y.z como tag
-                        dockerTag = env.GIT_TAG_NAME
                     } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "main") {
                         // Si estamos en master o main, usa latest como tag
                         dockerTag = "latest"  
+                    } else if (env.GIT_TAG_NAME ==~ env.TAG_REGEX) {
+                        // Si estamos en un tag semver, usa x.y.z como tag
+                        dockerTag = env.GIT_TAG_NAME
                     } else {
                         error("No se pudo determinar el tag de la imagen Docker")
                     }
